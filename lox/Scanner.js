@@ -93,6 +93,10 @@ class Scanner {
         if (this.isAtEnd()) return '\0';
         return this.source.charAt(this.current);
     }
+    peekNext() {
+        if (this.current + 1 > this.source.length) return '\0'
+        return this.source.charAt(this.current + 1)
+    }
     addTokenWithoutLiteral(type) {
         assert(type != null && arguments.length === 1);
         this.addToken(type, null);
@@ -117,20 +121,15 @@ class Scanner {
         this.addToken(TokenType.STRING, value)
     }
     number() {
-        while (isDigit(this.peek())) {
+        while (isDigit(this.peek())) this.advance()
+
+        if (this.peek() === '.' && isDigit(this.peekNext())) {
             this.advance()
+
+            while (isDigit(this.peek())) this.advance()
         }
-        if (this.peek() === '.') {
-            this.advance()
-            if (isDigit(this.peek())) {
-                while (isDigit(this.peek())) {
-                    this.advance()
-                }
-            } else {
-                Lox.error(this.line, 'Unterminated number.')
-            }
-        }
-        this.addToken(TokenType.NUMBER, this.source.substring(this.start, this.current))
+
+        this.addToken(TokenType.NUMBER, parseFloat(this.source.substring(this.start, this.current)))
     }
 }
 
