@@ -1,6 +1,7 @@
 const { Token, TokenType } = require('./Token');
 const Lox = require('./Lox');
 const assert = require('assert');
+const { isDigit } = require("../tool/utils")
 class Scanner {
     constructor(source) {
         this.source = source;
@@ -15,6 +16,7 @@ class Scanner {
             this.scanToken();
         }
         this.tokens.push(new Token(TokenType.EOF, "", null, this.line));
+        return this.tokens
     }
     scanToken() {
         const c = this.advance();
@@ -66,7 +68,12 @@ class Scanner {
             case '"': this.string(); break;
 
 
-            default: Lox.error(this.line, `Unexpected character:${c}`); break;
+            default:
+                if (isDigit(c)) {
+                    this.number();
+                } else {
+                    Lox.error(this.line, `Unexpected character:${c}`); break;
+                }
         }
     }
     //current是否超出了源代码长度
@@ -98,7 +105,7 @@ class Scanner {
     string() {
         while (this.peek() !== '"' && !this.isAtEnd()) {
             if (this.peek() === '\n') this.line++
-            value += this.advance();
+            this.advance()
         }
 
         if (this.isAtEnd()) {
@@ -108,6 +115,22 @@ class Scanner {
         this.advance();
         const value = this.source.substring(this.start + 1, this.current - 1)
         this.addToken(TokenType.STRING, value)
+    }
+    number() {
+        while (isDigit(this.peek())) {
+            this.advance()
+        }
+        if (this.peek() === '.') {
+            this.advance()
+            if (isDigit(this.peek())) {
+                while (isDigit(this.peek())) {
+                    this.advance()
+                }
+            } else {
+                Lox.error(this.line, 'Unterminated number.')
+            }
+        }
+        this.addToken(TokenType.NUMBER, this.source.substring(this.start, this.current))
     }
 }
 

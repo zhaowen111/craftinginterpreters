@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const readLine = require('readline');
-
+const Scanner = require("./Scanner.js")
 class Lox {
     constructor() {
         this.hadError = false;
@@ -30,7 +30,7 @@ class Lox {
                     process.exit(66);
                     break;
                 default:
-                    console.error(`Error reading file: ${err.message}`);
+                    throw err
                     process.exit(74);
             }
         }
