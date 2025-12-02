@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const readLine = require('readline');
 const Scanner = require("./Scanner.js")
+const Parser = require("./Parser.js")
 class Lox {
     constructor() {
         this.hadError = false;
@@ -56,7 +57,14 @@ class Lox {
     static run(source) {
         const scanner = new Scanner(source);
         const tokens = scanner.scanTokens();
-        tokens.forEach(token => console.log(token));
+        // 替换部分开始
+        const parser = new Parser(tokens);
+        const expression = parser.parse();
+
+        // Stop if there was a syntax error.
+        if (this.hadError) return;
+
+        console.log(expression);
     }
     static error(line, message) {
         this.report(line, "", message);
@@ -64,8 +72,13 @@ class Lox {
     static report(line, where, message) {
         console.error(`[line ${line}] Error${where}: ${message}`);
     }
+    parseError(token, message) {
+        if (token.type == TokenType.EOF) {
+            this.report(token.line, " at end", message);
+        } else {
+            this.report(token.line, " at '" + token.lexeme + "'", message);
+        }
+    }
 }
-
-Lox.start()
 
 module.exports = Lox;
