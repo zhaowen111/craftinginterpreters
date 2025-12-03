@@ -1,7 +1,7 @@
 const { TokenType } = require("./Token")
-const Expr = require("./expression/Expr")
-const Lox = require("./Lox")
-module.exports = class Parser {
+const { Binary, Literal, Unary, Grouping } = require("./expression/Expr")
+
+class Parser {
   constructor(tokens) {
     this.tokens = tokens
     this.current = 0
@@ -14,7 +14,7 @@ module.exports = class Parser {
     while (this.match(TokenType.BANG_EQUAL, TokenType.EQUAL_EQUAL)) {
       let operator = this.previous()
       let right = this.comparison()
-      expr = new Expr.Binary(expr, operator, right)
+      expr = new Binary(expr, operator, right)
     }
     return expr
   }
@@ -23,7 +23,7 @@ module.exports = class Parser {
     while (this.match(TokenType.GREATER, TokenType.GREATER_EQUAL, TokenType.LESS, TokenType.LESS_EQUAL)) {
       let operator = this.previous()
       let right = this.term()
-      expr = new Expr.Binary(expr, operator, right)
+      expr = new Binary(expr, operator, right)
     }
     return expr
   }
@@ -32,7 +32,7 @@ module.exports = class Parser {
     while (this.match(TokenType.MINUS, TokenType.PLUS)) {
       let operator = this.previous()
       let right = this.factor()
-      expr = new Expr.Binary(expr, operator, right)
+      expr = new Binary(expr, operator, right)
     }
     return expr
   }
@@ -41,7 +41,7 @@ module.exports = class Parser {
     while (this.match(TokenType.SLASH, TokenType.STAR)) {
       let operator = this.previous()
       let right = this.unary()
-      expr = new Expr.Binary(expr, operator, right)
+      expr = new Binary(expr, operator, right)
     }
     return expr
   }
@@ -49,23 +49,23 @@ module.exports = class Parser {
     if (this.match(TokenType.BANG, TokenType.MINUS)) {
       let operator = this.previous()
       let right = this.unary()
-      return new Expr.Unary(operator, right)
+      return new Unary(operator, right)
     }
     return this.primary()
   }
   primary() {
-    if (this.match(TokenType.FALSE)) return new Expr.Literal(false)
-    if (this.match(TokenType.TRUE)) return new Expr.Literal(true)
-    if (this.match(TokenType.NIL)) return new Expr.Literal(null)
+    if (this.match(TokenType.FALSE)) return new Literal(false)
+    if (this.match(TokenType.TRUE)) return new Literal(true)
+    if (this.match(TokenType.NIL)) return new Literal(null)
     if (this.match(TokenType.NUMBER, TokenType.STRING)) {
-      return new Expr.Literal(this.previous().literal)
+      return new Literal(this.previous().literal)
     }
     if (this.match(TokenType.LEFT_PAREN)) {
       let expr = this.expression()
       this.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
-      return new Expr.Grouping(expr)
+      return new Grouping(expr)
     }
-    throw this.error(peek(), "Expect expression.");
+    throw this.error(this.peek(), "Expect expression.");
   }
   consume(type, message) {
     if (this.check(type)) return this.advance();
@@ -76,7 +76,7 @@ module.exports = class Parser {
     try {
       return this.expression();
     } catch (error) {
-      if (error instanceof Parser.ParseError) {
+      if (error instanceof ParseError) {
         return null;
       } else {
         throw error;
@@ -84,7 +84,7 @@ module.exports = class Parser {
     }
   }
   error(token, message) {
-    Lox.parseError(token, message);
+    require('./Lox').parseError(token, message);
     return new ParseError();
   }
   synchronize() {
@@ -103,11 +103,6 @@ module.exports = class Parser {
           return;
       }
       this.advance();
-    }
-  }
-  static ParseError = class ParseError extends Error {
-    constructor() {
-      super();
     }
   }
   match(...types) {
@@ -138,3 +133,11 @@ module.exports = class Parser {
   }
 
 }
+class ParseError extends Error {
+  constructor() {
+    super();
+  }
+}
+
+
+module.exports = Parser;

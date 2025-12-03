@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const readLine = require('readline');
 const Scanner = require("./Scanner.js")
-const Parser = require("./Parser.js")
+const Parser = require("./Parser.js");
+const AstPrinter = require('./AstPrinter.js');
+const TokenType = require('./Token').TokenType;
 class Lox {
     constructor() {
         this.hadError = false;
@@ -64,7 +66,7 @@ class Lox {
         // Stop if there was a syntax error.
         if (this.hadError) return;
 
-        console.log(expression);
+        console.log(new AstPrinter().print(expression));
     }
     static error(line, message) {
         this.report(line, "", message);
@@ -72,7 +74,7 @@ class Lox {
     static report(line, where, message) {
         console.error(`[line ${line}] Error${where}: ${message}`);
     }
-    parseError(token, message) {
+    static parseError(token, message) {
         if (token.type == TokenType.EOF) {
             this.report(token.line, " at end", message);
         } else {
