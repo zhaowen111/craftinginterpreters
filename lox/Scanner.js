@@ -1,7 +1,8 @@
 const { Token, TokenType } = require('./Token');
 const Lox = require('./Lox');
 const assert = require('assert');
-const { isDigit } = require("../tool/utils")
+const { isDigit, isAlpha, isAlphaNumeric } = require("../tool/utils")
+const keywords = require('./keywords')
 class Scanner {
     constructor(source) {
         this.source = source;
@@ -9,12 +10,14 @@ class Scanner {
         this.start = 0;
         this.current = 0;
         this.line = 1;
+        this.keywords = keywords
     }
     scanTokens() {
         while (!this.isAtEnd()) {
             this.start = this.current;
             this.scanToken();
         }
+        //扫描完成后添加一个行尾符
         this.tokens.push(new Token(TokenType.EOF, "", null, this.line));
         return this.tokens
     }
@@ -22,36 +25,36 @@ class Scanner {
         const c = this.advance();
         switch (c) {
             //单字符token
-            case '(': this.addTokenWithoutLiteral(TokenType.LEFT_PAREN); break;
-            case ')': this.addTokenWithoutLiteral(TokenType.RIGHT_PAREN); break;
-            case '{': this.addTokenWithoutLiteral(TokenType.LEFT_BRACE); break;
-            case '}': this.addTokenWithoutLiteral(TokenType.RIGHT_BRACE); break;
-            case ',': this.addTokenWithoutLiteral(TokenType.COMMA); break;
-            case '.': this.addTokenWithoutLiteral(TokenType.DOT); break;
-            case '-': this.addTokenWithoutLiteral(TokenType.MINUS); break;
-            case '+': this.addTokenWithoutLiteral(TokenType.PLUS); break;
-            case ';': this.addTokenWithoutLiteral(TokenType.SEMICOLON); break;
-            case '*': this.addTokenWithoutLiteral(TokenType.STAR); break;
+            case '(': this.addToken(TokenType.LEFT_PAREN, null); break;
+            case ')': this.addToken(TokenType.RIGHT_PAREN, null); break;
+            case '{': this.addToken(TokenType.LEFT_BRACE, null); break;
+            case '}': this.addToken(TokenType.RIGHT_BRACE, null); break;
+            case ',': this.addToken(TokenType.COMMA, null); break;
+            case '.': this.addToken(TokenType.DOT, null); break;
+            case '-': this.addToken(TokenType.MINUS, null); break;
+            case '+': this.addToken(TokenType.PLUS, null); break;
+            case ';': this.addToken(TokenType.SEMICOLON, null); break;
+            case '*': this.addToken(TokenType.STAR, null); break;
 
             //1-2字符token
             case '!':
-                this.addTokenWithoutLiteral(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG);
+                this.addToken(this.match('=') ? TokenType.BANG_EQUAL : TokenType.BANG, null);
                 break;
             case '=':
-                this.addTokenWithoutLiteral(this.match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL);
+                this.addToken(this.match('=') ? TokenType.EQUAL_EQUAL : TokenType.EQUAL, null);
                 break;
             case '<':
-                this.addTokenWithoutLiteral(this.match('=') ? TokenType.LESS_EQUAL : TokenType.LESS);
+                this.addToken(this.match('=') ? TokenType.LESS_EQUAL : TokenType.LESS, null);
                 break;
             case '>':
-                this.addTokenWithoutLiteral(this.match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER);
+                this.addToken(this.match('=') ? TokenType.GREATER_EQUAL : TokenType.GREATER, null);
                 break;
             case '/':
                 if (this.match('/')) {
                     //单行注释，忽略直到行尾
                     while (this.peek() !== '\n' && !this.isAtEnd()) this.advance();
                 } else {
-                    this.addTokenWithoutLiteral(TokenType.SLASH);
+                    this.addToken(TokenType.SLASH, null);
                 }
                 break;
 
@@ -71,7 +74,10 @@ class Scanner {
             default:
                 if (isDigit(c)) {
                     this.number();
-                } else {
+                } else if (isAlpha(c)) {
+                    this.identifier()
+                }
+                else {
                     Lox.error(this.line, `Unexpected character:${c}`); break;
                 }
         }
@@ -80,15 +86,17 @@ class Scanner {
     isAtEnd() {
         return this.current >= this.source.length;
     }
+    //返回当前扫描字符是否与参数传递的字符相同。相同则current加1
     match(expected) {
-        if (this.isAtEnd()) return false;
-        if (this.source.charAt(this.current) !== expected) return false;
+        if (this.isAtEnd() || this.peek() !== expected) return false;
         this.current++;
         return true;
     }
+    //返回当前扫描字符，并使current+1
     advance() {
         return this.source.charAt(this.current++);
     }
+    //返回当前扫描字符
     peek() {
         if (this.isAtEnd()) return '\0';
         return this.source.charAt(this.current);
@@ -101,6 +109,7 @@ class Scanner {
         assert(type != null && arguments.length === 1);
         this.addToken(type, null);
     }
+    //将一个token放入this.tokens
     addToken(type, literal = null) {
         assert(type != null && arguments.length === 2);
         const text = this.source.substring(this.start, this.current);
@@ -130,6 +139,13 @@ class Scanner {
         }
 
         this.addToken(TokenType.NUMBER, parseFloat(this.source.substring(this.start, this.current)))
+    }
+    identifier() {
+        while (isAlphaNumeric(this.peek())) this.advance()
+
+        const text = this.source.substring(this.start, this.current)
+        let type = this.keywords.get(text) || TokenType.IDENTIFIER
+        this.addToken(type, null)
     }
 }
 
