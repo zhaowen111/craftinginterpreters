@@ -1,13 +1,84 @@
+const { ParseError } = require("./Error")
 const { TokenType } = require("./Token")
-const { Binary, Literal, Unary, Grouping } = require("./expression/Expr")
-
+const { Binary, Literal, Unary, Grouping, Variable, Assign } = require("./expression/Expr")
+const Stmt = require('./expression/Stmt')
 class Parser {
   constructor(tokens) {
     this.tokens = tokens
     this.current = 0
+    this.statements = []
+  }
+
+  parse() {
+    try {
+      while (!this.isAtEnd()) {
+        this.statements.push(this.declaration())
+      }
+      return this.statements;
+    } catch (error) {
+      if (error instanceof ParseError) {
+        return null;
+      } else {
+        throw error;
+      }
+    }
+  }
+  declaration() {
+    try {
+      if (this.match(TokenType.VAR)) return this.varDeclaration();
+      return this.statement();
+    } catch (error) {
+      this.synchronize();
+      return null;
+    }
+  }
+  varDeclaration() {
+    const name = this.consume(TokenType.IDENTIFIER, "Expect variable name.");
+    let initializer = null;
+    if (this.match(TokenType.EQUAL)) {
+      initializer = this.expression();
+    }
+    this.consume(TokenType.SEMICOLON, "Expect ';' after variable declaration.");
+    return new Stmt.Var(name, initializer);
+  }
+  statement() {
+    if (this.match(TokenType.PRINT)) return this.printStatement();
+    if (this.match(TokenType.LEFT_BRACE)) return this.block();
+    return this.expressionStatement();
+  }
+  block() {
+    const declarations = [];
+    while (!this.check(TokenType.RIGHT_BRACE) && !this.isAtEnd()) {
+      declarations.push(this.declaration());
+    }
+    this.consume(TokenType.RIGHT_BRACE, "Expect '}' after block.");
+    return new Stmt.Block(declarations);
+  }
+  printStatement() {
+    const value = this.expression();
+    this.consume(TokenType.SEMICOLON, "Expect ';' after value.");
+    return new Stmt.Print(value);
+  }
+  expressionStatement() {
+    const expr = this.expression();
+    this.consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+    return new Stmt.Expression(expr);
   }
   expression() {
-    return this.equality()
+    return this.assignment()
+  }
+  assignment() {
+    let expr = this.equality()
+    if (this.match(TokenType.EQUAL)) {
+      let equals = this.previous()
+      let value = this.assignment()
+      if (expr instanceof Variable) {
+        let name = expr.name
+        return new Assign(name, value)
+      }
+      this.error(equals, "Invalid assignment target.")
+    }
+    return expr
   }
   equality() {
     let expr = this.comparison()
@@ -60,28 +131,15 @@ class Parser {
     if (this.match(TokenType.NUMBER, TokenType.STRING)) {
       return new Literal(this.previous().literal)
     }
+    if (this.match(TokenType.IDENTIFIER)) {
+      return new Variable(this.previous());
+    }
     if (this.match(TokenType.LEFT_PAREN)) {
       let expr = this.expression()
       this.consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
       return new Grouping(expr)
     }
     throw this.error(this.peek(), "Expect expression.");
-  }
-  consume(type, message) {
-    if (this.check(type)) return this.advance();
-
-    throw new Error(this.peek(), message);
-  }
-  parse() {
-    try {
-      return this.expression();
-    } catch (error) {
-      if (error instanceof ParseError) {
-        return null;
-      } else {
-        throw error;
-      }
-    }
   }
   error(token, message) {
     require('./Lox').parseError(token, message);
@@ -114,6 +172,10 @@ class Parser {
     }
     return false
   }
+  consume(type, message) {
+    if (this.check(type)) return this.advance();
+    throw new Error(this.peek(), message);
+  }
   check(type) {
     if (this.isAtEnd()) return false
     return this.peek().type === type
@@ -131,13 +193,5 @@ class Parser {
   previous() {
     return this.tokens[this.current - 1]
   }
-
 }
-class ParseError extends Error {
-  constructor() {
-    super();
-  }
-}
-
-
 module.exports = Parser;

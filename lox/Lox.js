@@ -3,12 +3,14 @@ const path = require('path');
 const readLine = require('readline');
 const Scanner = require("./Scanner.js")
 const Parser = require("./Parser.js");
-const AstPrinter = require('./AstPrinter.js');
+const Interpreter = require('./Interpreter.js');
 const TokenType = require('./Token').TokenType;
 class Lox {
     constructor() {
-        this.hadError = false;
     }
+    static interpreter = new Interpreter();
+    static hadRuntimeError = false;
+    static hadError = false;
     static start() {
         const args = process.argv.slice(2)
         if (args.length > 1) {
@@ -25,7 +27,8 @@ class Lox {
         try {
             const content = fs.readFileSync(absFilePath, 'utf8')
             this.run(content)
-            if (this.hadError) process.exit(65)
+            if (Lox.hadError) process.exit(65)
+            if (Lox.hadRuntimeError) process.exit(70)
         } catch (err) {
             switch (err.code) {
                 case 'ENOENT':
@@ -48,7 +51,7 @@ class Lox {
         rl.prompt();
         rl.on('line', (line) => {
             this.run(line);
-            this.hadError = false;
+            Lox.hadError = false;
             rl.prompt();
         }).on('close', () => {
             console.log('Exiting Lox REPL.');
@@ -59,20 +62,23 @@ class Lox {
     static run(source) {
         const scanner = new Scanner(source);
         const tokens = scanner.scanTokens();
-        // 替换部分开始
         const parser = new Parser(tokens);
-        const expression = parser.parse();
+        const statements = parser.parse();
 
         // Stop if there was a syntax error.
-        if (this.hadError) return;
-
-        console.log(new AstPrinter().print(expression));
+        if (Lox.hadError) return;
+        Lox.interpreter.interpret(statements)
     }
     static error(line, message) {
         this.report(line, "", message);
     }
+    static runtimeError(error) {
+        console.log(`${error.getMessage()}\n[line ${error.token.line}]`);
+        Lox.hadRuntimeError = true;
+    }
     static report(line, where, message) {
         console.error(`[line ${line}] Error${where}: ${message}`);
+        Lox.hadError = true;
     }
     static parseError(token, message) {
         if (token.type == TokenType.EOF) {

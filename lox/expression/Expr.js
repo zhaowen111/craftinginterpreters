@@ -4,54 +4,38 @@ class Expr {
     throw new Error("accept method must be implemented");
   }
 }
-class Visitor {
-  visitAssignExpr(expr) {
-    throw new Error("visitAssignExpr method must be implemented");
+
+class Grouping extends Expr {
+  constructor(expression) {
+    super();
+    this.expression = expression;
   }
-  visitBinaryExpr(expr) {
-    throw new Error("visitBinaryExpr method must be implemented");
-  }
-  visitCallExpr(expr) {
-    throw new Error("visitCallExpr method must be implemented");
-  }
-  visitGetExpr(expr) {
-    throw new Error("visitGetExpr method must be implemented");
-  }
-  visitGroupingExpr(expr) {
-    throw new Error("visitGroupingExpr method must be implemented");
-  }
-  visitLiteralExpr(expr) {
-    throw new Error("visitLiteralExpr method must be implemented");
-  }
-  visitLogicalExpr(expr) {
-    throw new Error("visitLogicalExpr method must be implemented");
-  }
-  visitSetExpr(expr) {
-    throw new Error("visitSetExpr method must be implemented");
-  }
-  visitSuperExpr(expr) {
-    throw new Error("visitSuperExpr method must be implemented");
-  }
-  visitThisExpr(expr) {
-    throw new Error("visitThisExpr method must be implemented");
-  }
-  visitUnaryExpr(expr) {
-    throw new Error("visitUnaryExpr method must be implemented");
-  }
-  visitVariableExpr(expr) {
-    throw new Error("visitVariableExpr method must be implemented");
+
+  accept(visitor) {
+    return visitor.visitGroupingExpr(this);
   }
 }
 
-class Assign extends Expr {
-  constructor(name, value) {
+class Literal extends Expr {
+  constructor(value) {
     super();
-    this.name = name;
     this.value = value;
   }
 
   accept(visitor) {
-    return visitor.visitAssignExpr(this);
+    return visitor.visitLiteralExpr(this);
+  }
+}
+
+class Unary extends Expr {
+  constructor(operator, right) {
+    super();
+    this.operator = operator;
+    this.right = right;
+  }
+
+  accept(visitor) {
+    return visitor.visitUnaryExpr(this);
   }
 }
 
@@ -65,6 +49,18 @@ class Binary extends Expr {
 
   accept(visitor) {
     return visitor.visitBinaryExpr(this);
+  }
+}
+
+class Assign extends Expr {
+  constructor(name, value) {
+    super();
+    this.name = name;
+    this.value = value;
+  }
+
+  accept(visitor) {
+    return visitor.visitAssignExpr(this);
   }
 }
 
@@ -90,28 +86,6 @@ class Get extends Expr {
 
   accept(visitor) {
     return visitor.visitGetExpr(this);
-  }
-}
-
-class Grouping extends Expr {
-  constructor(expression) {
-    super();
-    this.expression = expression;
-  }
-
-  accept(visitor) {
-    return visitor.visitGroupingExpr(this);
-  }
-}
-
-class Literal extends Expr {
-  constructor(value) {
-    super();
-    this.value = value;
-  }
-
-  accept(visitor) {
-    return visitor.visitLiteralExpr(this);
   }
 }
 
@@ -164,18 +138,6 @@ class This extends Expr {
   }
 }
 
-class Unary extends Expr {
-  constructor(operator, right) {
-    super();
-    this.operator = operator;
-    this.right = right;
-  }
-
-  accept(visitor) {
-    return visitor.visitUnaryExpr(this);
-  }
-}
-
 class Variable extends Expr {
   constructor(name) {
     super();
@@ -187,4 +149,4 @@ class Variable extends Expr {
   }
 }
 
-module.exports = { Expr, Assign, Variable, Unary, This, Super, Set, Logical, Literal, Grouping, Get, Call, Binary, Visitor };
+module.exports = { Expr, Assign, Variable, Unary, This, Super, Set, Logical, Literal, Grouping, Get, Call, Binary };
